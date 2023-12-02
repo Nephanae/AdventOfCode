@@ -2,17 +2,8 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use Illuminate\Support\Collection;
-use Illuminate\Support\LazyCollection;
 
-$input = new LazyCollection(function () {
-    $fp = fopen('php://stdin', 'r');
-    while ($line = fgets($fp)) {
-        yield $line;
-    }
-
-    fclose($fp);
-});
-
+$input = require __DIR__ . '/../getInput.php';
 $balls = (object) [
     'red' => 12,
     'green' => 13,
