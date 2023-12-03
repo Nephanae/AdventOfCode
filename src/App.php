@@ -9,6 +9,7 @@ final class App
 {
     const OPTS = [
         ['short' => 'h', 'long' => 'help', 'type' => 'no_value', 'comm' => 'Print help'],
+        ['short' => 'l', 'long' => 'list', 'type' => 'no_value', 'comm' => 'List challenges'],
     ];
 
     private Collection $opts;
@@ -18,19 +19,48 @@ final class App
         $this->opts = $this->buildOpts();
     }
 
+    public function getChallengeList(): LazyCollection
+    {
+        return new LazyCollection(function () {
+            foreach ($this->getYearList() as $year) {
+                foreach ($this->getDayList($year) as $day) {
+                    foreach ($this->getPartList($year, $day) as $part) {
+                        $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
+                        if (class_exists($challengeClass)) {
+                            yield (object) ['year' => $year, 'day' => $day, 'part' => $part];
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     public function getOpts(): Collection
     {
         return $this->opts;
     }
 
-    public function run($year, $day, $part)
+    public function run(array $argv): void
     {
         if ($this->opts->has('help')) {
-            $app->usage();
+            $this->usage();
         }
 
-        $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
+        if ($this->opts->has('list')) {
+            foreach ($this->getChallengeList() as $info) {
+                echo "{$info->year}/{$info->day}/{$info->part}" . PHP_EOL;
+            }
 
+            die();
+        }
+
+        if (count($argv) < 4) {
+            $this->usage();
+        }
+
+        list($script, $year, $day, $part) = $argv;
+
+        $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
         if (!class_exists($challengeClass)) {
             echo "Unknown challenge {$challengeClass}" . PHP_EOL;
             usage();
@@ -41,7 +71,7 @@ final class App
         echo $challenge->resolve() . PHP_EOL;
     }
 
-    public function usage()
+    public function usage(): void
     {
         echo 'Usage :' . PHP_EOL;
         echo 'php scripts.php [OPTIONS] <Year> <Day> <Part> < input' . PHP_EOL;
@@ -93,5 +123,53 @@ final class App
             echo $e->getMessage();
             $this->usage();
         }
+    }
+
+    private function getYearList(): LazyCollection
+    {
+        return new LazyCollection(function () {
+            $dh = opendir(__DIR__);
+            while (($year = readdir($dh)) !== false) {
+                if ($year === '.' || $year === '..' || !is_dir(__DIR__ . "/{$year}")) {
+                    continue;
+                }
+
+                yield substr($year, 1);
+            }
+
+            closedir($dh);
+        });
+    }
+
+    private function getDayList(int $year): LazyCollection
+    {
+        return new LazyCollection(function () use ($year) {
+            $dh = opendir(__DIR__ . "/Y{$year}");
+            while (($day = readdir($dh)) !== false) {
+                if ($day === '.' || $day === '..') {
+                    continue;
+                }
+
+                yield substr($day, 1);
+            }
+
+            closedir($dh);
+        });
+    }
+
+    private function getPartList(int $year, int $day): LazyCollection
+    {
+        return new LazyCollection(function () use ($year, $day) {
+            $dh = opendir(__DIR__ . "/Y{$year}/D{$day}");
+            while (($part = readdir($dh)) !== false) {
+                if ($part === '.' || $part === '..') {
+                    continue;
+                }
+
+                yield substr($part, 1);
+            }
+
+            closedir($dh);
+        });
     }
 }
