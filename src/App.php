@@ -65,7 +65,7 @@ final class App
         $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
         if (!class_exists($challengeClass)) {
             echo "Unknown challenge {$challengeClass}" . PHP_EOL;
-            usage();
+            $this->usage();
         }
         
         $challenge = new $challengeClass($this->getInput());
