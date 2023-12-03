@@ -54,11 +54,13 @@ final class App
             die();
         }
 
-        if (count($argv) < 4) {
+        $args = array_filter($argv, fn($arg) => substr_count($arg, '/') === 2);
+
+        if (count($args) !== 1) {
             $this->usage();
         }
 
-        list($script, $year, $day, $part) = $argv;
+        list($year, $day, $part) = explode('/', current($args));
 
         $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
         if (!class_exists($challengeClass)) {
@@ -74,7 +76,8 @@ final class App
     public function usage(): void
     {
         echo 'Usage :' . PHP_EOL;
-        echo 'php scripts.php [OPTIONS] <Year> <Day> <Part> < input' . PHP_EOL;
+        echo 'php scripts.php [OPTIONS] <challenge> < input' . PHP_EOL;
+        echo " <challenge>\tChallenge with format : <year>/<day>/<part>" . PHP_EOL;
         foreach (self::OPTS as $opt) {
             echo " -{$opt['short']} --{$opt['long']}\t{$opt['comm']}" . ($opt['type'] === 'required' ? "\t*required" : '') . PHP_EOL;
         }
