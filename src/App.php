@@ -117,7 +117,7 @@ final class App
             return new LazyCollection(function () {
                 $fp = fopen('php://stdin', 'r');
                 while ($line = fgets($fp)) {
-                    yield $line;
+                    yield str_replace(["\r", "\n"], '', $line);
                 }
 
                 fclose($fp);
