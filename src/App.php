@@ -4,12 +4,14 @@ namespace App;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
+use stdClass as StdClass;
 
 final class App
 {
     const OPTS = [
         ['short' => 'h', 'long' => 'help', 'type' => 'no_value', 'comm' => 'Print help'],
         ['short' => 'l', 'long' => 'list', 'type' => 'no_value', 'comm' => 'List challenges'],
+        ['short' => 'c', 'long' => 'create', 'type' => 'optional', 'comm' => 'Create challenge class'],
     ];
 
     private Collection $opts;
@@ -24,49 +26,100 @@ final class App
         return $this->opts;
     }
 
-    public function run(array $argv): void
+    public function run(array $argv)
     {
         if ($this->opts->has('help')) {
-            $this->usage();
-        }
-
-        if ($this->opts->has('list')) {
-            foreach ($this->getChallengeList() as $info) {
-                echo "{$info->year}/{$info->day}/{$info->part}" . PHP_EOL;
-            }
-
-            die();
+            return $this->usage();
         }
 
         $args = array_filter($argv, fn($arg) => substr_count($arg, '/') === 2);
+        $challengeArg = count($args) === 1 ? current($args) : null;
 
-        if (count($args) !== 1) {
-            $this->usage();
+        foreach ($this->opts->keys() as $opt) {
+            switch ($opt) {
+                case 'list':
+                    return $this->list();
+
+                case 'create':
+                    return $this->create($challengeArg);
+            }
         }
 
-        list($year, $day, $part) = explode('/', current($args));
+        list($year, $day, $part) = $challengeArg !== null
+            ? explode('/', $challengeArg)
+            : array_values((array) $this->getChallengeList()->sort()->last());
 
         $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
         if (!class_exists($challengeClass)) {
             echo "Unknown challenge {$challengeClass}" . PHP_EOL;
-            $this->usage();
+
+            return $this->usage();
         }
         
         $challenge = new $challengeClass($this->getInput());
 
+        echo "Challenge {$year}/{$day}/{$part} :" . PHP_EOL;
         echo $challenge->resolve() . PHP_EOL;
     }
 
-    public function usage(): void
+    private function create(array $challengeArg = null): void
+    {
+        list($year, $day, $part) = $challengeArg !== null
+            ? explode('/', $challengeArg)
+            : array_values((array) $this->getNextChallenge());
+
+        echo "create {$year}/{$day}/{$part}" . PHP_EOL;
+
+        if (!is_dir(__DIR__ . "/Y{$year}")) {
+            mkdir(__DIR__ . "/Y{$year}");
+        }
+
+        if (!is_dir(__DIR__ . "/Y{$year}/D{$day}")) {
+            mkdir(__DIR__ . "/Y{$year}/D{$day}");
+        }
+
+        mkdir(__DIR__ . "/Y{$year}/D{$day}/P{$part}");
+
+        $filename = __DIR__ . "/Y{$year}/D{$day}/P{$part}/Challenge.php";
+
+        ob_start();
+        include __DIR__ . '/ChallengeTemplate.php';
+        $fileContents = ob_get_clean();
+
+        file_put_contents($filename, '<?php' . PHP_EOL . $fileContents);
+        echo "New file created : {$filename}" . PHP_EOL;
+    }
+
+    private function getNextChallenge(): StdClass
+    {
+        $lastChallenge = $this->getChallengeList()->sort()->last();
+        if ($lastChallenge->day === '25' && $lastChallenge->part === '2') {
+            return (object) ['year' => $lastChallenge->year + 1, 'day' => '1', 'part' => '1'];
+        }
+
+        if ($lastChallenge->part === '1') {
+            return (object) ['year' => $lastChallenge->year, 'day' => $lastChallenge->day, 'part' => '2'];
+        }
+
+        return (object) ['year' => $lastChallenge->year, 'day' => $lastChallenge->day + 1, 'part' => '1'];
+    }
+
+    private function list(): void
+    {
+        echo 'list :' . PHP_EOL;
+        foreach ($this->getChallengeList() as $info) {
+            echo "{$info->year}/{$info->day}/{$info->part}" . PHP_EOL;
+        }
+    }
+
+    private function usage(): void
     {
         echo 'Usage :' . PHP_EOL;
-        echo 'php scripts.php [OPTIONS] <challenge> < input' . PHP_EOL;
-        echo " <challenge>\tChallenge with format : <year>/<day>/<part>" . PHP_EOL;
+        echo 'php scripts.php [OPTIONS] [challenge] < input' . PHP_EOL;
+        echo " [challenge]\tChallenge with format : <year>/<day>/<part>" . PHP_EOL;
         foreach (self::OPTS as $opt) {
             echo " -{$opt['short']} --{$opt['long']}\t{$opt['comm']}" . ($opt['type'] === 'required' ? "\t*required" : '') . PHP_EOL;
         }
-
-        die();
     }
 
     private function buildOpts(): Collection
