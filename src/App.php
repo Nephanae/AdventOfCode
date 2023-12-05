@@ -19,22 +19,6 @@ final class App
         $this->opts = $this->buildOpts();
     }
 
-    public function getChallengeList(): LazyCollection
-    {
-        return new LazyCollection(function () {
-            foreach ($this->getYearList() as $year) {
-                foreach ($this->getDayList($year) as $day) {
-                    foreach ($this->getPartList($year, $day) as $part) {
-                        $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
-                        if (class_exists($challengeClass)) {
-                            yield (object) ['year' => $year, 'day' => $day, 'part' => $part];
-                        }
-                    }
-                }
-            }
-        });
-    }
-
     public function getOpts(): Collection
     {
         return $this->opts;
@@ -128,51 +112,48 @@ final class App
         }
     }
 
-    private function getYearList(): LazyCollection
+    private function getChallengeList(): LazyCollection
     {
         return new LazyCollection(function () {
-            $dh = opendir(__DIR__);
-            while (($year = readdir($dh)) !== false) {
-                if ($year === '.' || $year === '..' || !is_dir(__DIR__ . "/{$year}")) {
-                    continue;
+            foreach ($this->getYearList() as $year) {
+                foreach ($this->getDayList($year) as $day) {
+                    foreach ($this->getPartList($year, $day) as $part) {
+                        $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
+                        if (class_exists($challengeClass)) {
+                            yield (object) ['year' => $year, 'day' => $day, 'part' => $part];
+                        }
+                    }
                 }
-
-                yield substr($year, 1);
             }
-
-            closedir($dh);
         });
+    }
+
+    private function getChallengeDir(string $root, string $letter): LazyCollection
+    {
+        return new LazyCollection(function () use ($root, $letter) {
+            $files = scandir($root);
+            sort($files);
+            foreach ($files as $file) {
+                if (substr($file, 0, 1) === $letter && is_dir("{$root}/{$file}")) {
+                    yield substr($file, 1);
+
+                }
+            }
+        });
+    }
+
+    private function getYearList(): LazyCollection
+    {
+        return $this->getChallengeDir(__DIR__, 'Y');
     }
 
     private function getDayList(int $year): LazyCollection
     {
-        return new LazyCollection(function () use ($year) {
-            $dh = opendir(__DIR__ . "/Y{$year}");
-            while (($day = readdir($dh)) !== false) {
-                if ($day === '.' || $day === '..') {
-                    continue;
-                }
-
-                yield substr($day, 1);
-            }
-
-            closedir($dh);
-        });
+        return $this->getChallengeDir(__DIR__ . "/Y{$year}", 'D');
     }
 
     private function getPartList(int $year, int $day): LazyCollection
     {
-        return new LazyCollection(function () use ($year, $day) {
-            $dh = opendir(__DIR__ . "/Y{$year}/D{$day}");
-            while (($part = readdir($dh)) !== false) {
-                if ($part === '.' || $part === '..') {
-                    continue;
-                }
-
-                yield substr($part, 1);
-            }
-
-            closedir($dh);
-        });
+        return $this->getChallengeDir(__DIR__ . "/Y{$year}/D${day}", 'P');
     }
 }
