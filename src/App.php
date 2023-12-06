@@ -1,6 +1,7 @@
 <?php
 namespace App;
 
+use Dotenv\Dotenv;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
@@ -15,10 +16,12 @@ final class App
     ];
 
     private Collection $opts;
+    private Dotenv $dotenv;
 
-    public function __construct()
+    public function __construct(Dotenv $dotenv)
     {
         $this->opts = $this->buildOpts();
+        $this->dotenv = $dotenv;
     }
 
     public function getOpts(): Collection
