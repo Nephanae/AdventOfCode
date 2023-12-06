@@ -12,7 +12,7 @@ final class App
     const OPTS = [
         ['short' => 'h', 'long' => 'help', 'type' => 'no_value', 'comm' => 'Print help'],
         ['short' => 'l', 'long' => 'list', 'type' => 'no_value', 'comm' => 'List challenges'],
-        ['short' => 'c', 'long' => 'create', 'type' => 'optional', 'comm' => 'Create challenge class'],
+        ['short' => 'c', 'long' => 'create', 'type' => 'no_value', 'comm' => 'Create challenge class'],
     ];
 
     private Collection $opts;
@@ -71,7 +71,7 @@ final class App
         echo 'Solved in ' . (microtime(true) - $time) . 's' . PHP_EOL;
     }
 
-    private function create(array $challengeArg = null): void
+    private function create(string $challengeArg = null): void
     {
         list($year, $day, $part) = $challengeArg !== null
             ? explode('/', $challengeArg)
