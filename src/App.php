@@ -59,7 +59,9 @@ final class App
         $challenge = new $challengeClass($this->getInput());
 
         echo "Challenge {$year}/{$day}/{$part} :" . PHP_EOL;
+        $time = microtime(true);
         echo $challenge->resolve() . PHP_EOL;
+        echo 'Solved in ' . (microtime(true) - $time) . 's' . PHP_EOL;
     }
 
     private function create(array $challengeArg = null): void
