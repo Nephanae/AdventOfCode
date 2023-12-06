@@ -99,20 +99,6 @@ final class App
         echo "New file created : {$filename}" . PHP_EOL;
     }
 
-    private function getNextChallenge(): StdClass
-    {
-        $lastChallenge = $this->getChallengeList()->sort()->last();
-        if ($lastChallenge->day === '25' && $lastChallenge->part === '2') {
-            return (object) ['year' => $lastChallenge->year + 1, 'day' => '1', 'part' => '1'];
-        }
-
-        if ($lastChallenge->part === '1') {
-            return (object) ['year' => $lastChallenge->year, 'day' => $lastChallenge->day, 'part' => '2'];
-        }
-
-        return (object) ['year' => $lastChallenge->year, 'day' => $lastChallenge->day + 1, 'part' => '1'];
-    }
-
     private function list(): void
     {
         echo 'list :' . PHP_EOL;
@@ -190,22 +176,6 @@ final class App
         });
     }
 
-    private function getChallengeList(): LazyCollection
-    {
-        return new LazyCollection(function () {
-            foreach ($this->getYearList() as $year) {
-                foreach ($this->getDayList($year) as $day) {
-                    foreach ($this->getPartList($year, $day) as $part) {
-                        $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
-                        if (class_exists($challengeClass)) {
-                            yield (object) ['year' => $year, 'day' => $day, 'part' => $part];
-                        }
-                    }
-                }
-            }
-        });
-    }
-
     private function getChallengeDir(string $root, string $letter): LazyCollection
     {
         return new LazyCollection(function () use ($root, $letter) {
@@ -233,5 +203,35 @@ final class App
     private function getPartList(int $year, int $day): LazyCollection
     {
         return $this->getChallengeDir(__DIR__ . "/Y{$year}/D${day}", 'P');
+    }
+
+    private function getChallengeList(): LazyCollection
+    {
+        return new LazyCollection(function () {
+            foreach ($this->getYearList() as $year) {
+                foreach ($this->getDayList($year) as $day) {
+                    foreach ($this->getPartList($year, $day) as $part) {
+                        $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
+                        if (class_exists($challengeClass)) {
+                            yield (object) ['year' => $year, 'day' => $day, 'part' => $part];
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    private function getNextChallenge(): StdClass
+    {
+        $lastChallenge = $this->getChallengeList()->sort()->last();
+        if ($lastChallenge->day === '25' && $lastChallenge->part === '2') {
+            return (object) ['year' => $lastChallenge->year + 1, 'day' => '1', 'part' => '1'];
+        }
+
+        if ($lastChallenge->part === '1') {
+            return (object) ['year' => $lastChallenge->year, 'day' => $lastChallenge->day, 'part' => '2'];
+        }
+
+        return (object) ['year' => $lastChallenge->year, 'day' => $lastChallenge->day + 1, 'part' => '1'];
     }
 }
