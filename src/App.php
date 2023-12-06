@@ -58,8 +58,12 @@ final class App
 
             return $this->usage();
         }
-        
-        $challenge = new $challengeClass($this->getInput());
+
+        $input = posix_isatty(STDIN)
+            ? $this->getLocalInput($year, $day)
+            : 'php://stdin';
+
+        $challenge = new $challengeClass($this->getInput($input));
 
         echo "Challenge {$year}/{$day}/{$part} :" . PHP_EOL;
         $time = microtime(true);
@@ -153,21 +157,37 @@ final class App
         return new Collection($opts);
     }
 
-    private function getInput(): LazyCollection
+    private function getLocalInput(int $year, int $day): string
     {
-        try {
-            return new LazyCollection(function () {
-                $fp = fopen('php://stdin', 'r');
-                while ($line = fgets($fp)) {
-                    yield str_replace(["\r", "\n"], '', $line);
-                }
-
-                fclose($fp);
-            });
-        } catch (Exception $e) {
-            echo $e->getMessage();
-            $this->usage();
+        if (!is_dir(__DIR__ . '/../inputs')) {
+            mkdir(__DIR__ . '/../inputs');
         }
+
+        $filename = __DIR__ . "/../inputs/{$year}-{$day}.txt";
+        if (!file_exists($filename)) {
+            $this->dotenv->required('AOC_SESSION')->notEmpty();
+            $session = $_ENV['AOC_SESSION'];
+            echo "Downloading input..." . PHP_EOL;
+            $contents = file_get_contents("https://adventofcode.com/{$year}/day/{$day}/input", false, stream_context_create([
+                'http' => ['header' => "Cookie: session={$session}\r\n"],
+            ]));
+
+            file_put_contents($filename, $contents);
+        }
+
+        return $filename;
+    }
+
+    private function getInput(string $from): LazyCollection
+    {
+        return new LazyCollection(function () use ($from) {
+            $fp = fopen($from, 'r');
+            while ($line = fgets($fp)) {
+                yield str_replace(["\r", "\n"], '', $line);
+            }
+
+            fclose($fp);
+        });
     }
 
     private function getChallengeList(): LazyCollection
