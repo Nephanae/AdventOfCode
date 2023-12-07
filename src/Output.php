@@ -22,5 +22,20 @@ final class Output
     {
         return "\033[34m{$string}\033[39m";
     }
+
+    public function gray(string $string): string
+    {
+        return "\033[90m{$string}\033[39m";
+    }
+
+    public function bgGray(string $string): string
+    {
+        return "\033[100m{$string}\033[49m";
+    }
+
+    public function whiteBold(string $string): string
+    {
+        return "\033[01m\033[97m{$string}\033[39m\033[22m";
+    }
 }
 

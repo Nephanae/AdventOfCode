@@ -1,6 +1,7 @@
 <?php
 namespace App;
 
+use App\Output;
 use Dotenv\Dotenv;
 use Exception;
 use Illuminate\Support\Collection;
@@ -13,6 +14,7 @@ final class App
         ['short' => 'h', 'long' => 'help', 'type' => 'no_value', 'comm' => 'Print help'],
         ['short' => 'l', 'long' => 'list', 'type' => 'no_value', 'comm' => 'List challenges'],
         ['short' => 'c', 'long' => 'create', 'type' => 'no_value', 'comm' => 'Create challenge class'],
+        ['short' => 's', 'long' => 'statement', 'type' => 'no_value', 'comm' => 'Retrieve and print challenge statement'],
     ];
 
     private Collection $opts;
@@ -45,6 +47,9 @@ final class App
 
                 case 'create':
                     return $this->create($challengeArg);
+
+                case 'statement':
+                    return $this->statement($challengeArg);
             }
         }
 
@@ -105,6 +110,39 @@ final class App
         foreach ($this->getChallengeList() as $info) {
             echo "{$info->year}/{$info->day}/{$info->part}" . PHP_EOL;
         }
+    }
+
+    private function statement(string $challengeArg = null): void
+    {
+        list($year, $day, $part) = $challengeArg !== null
+            ? explode('/', $challengeArg)
+            : array_values((array) $this->getChallengeList()->sort()->last());
+
+        $this->dotenv->required('AOC_SESSION')->notEmpty();
+        $session = $_ENV['AOC_SESSION'];
+        $contents = file_get_contents("https://adventofcode.com/{$year}/day/{$day}", false, stream_context_create([
+            'http' => ['header' => "Cookie: session={$session}\r\n"],
+        ]));
+
+        $start = strpos($contents, '<article');
+        $end = strrpos($contents, '</article>');
+        $contents = substr($contents, $start, $end - $start);
+
+        $output = new Output();
+        $replacements = [
+            '#<pre>(.*?)</pre>(*SKIP)(*FAIL)|\n#s' => '',
+            '#<em>(.*?)</em>#' => $output->whiteBold('$1'),
+            '#<li>(.*?)</li>#' => ' - $1' . PHP_EOL,
+            '#<p>(.*?)</p>#' => '$1' . PHP_EOL . PHP_EOL,
+            '#<h2[^>]*>(.*?)</h2>#' => $output->whiteBold('$1') . PHP_EOL . PHP_EOL,
+            '#\n</code>#s' => '</code>',
+            '#<code>(.*?)</code>#s' => $output->bgGray('$1'),
+            '#<pre>(.*?)</pre>#s' => $output->bgGray('$1') . "\033[K" . PHP_EOL . PHP_EOL,
+        ];
+
+        $contents = preg_replace(array_keys($replacements), array_values($replacements), $contents);
+
+        echo PHP_EOL . strip_tags($contents) . PHP_EOL;
     }
 
     private function usage(): void
