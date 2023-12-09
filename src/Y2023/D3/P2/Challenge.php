@@ -1,11 +1,11 @@
 <?php
 namespace App\Y2023\D3\P2;
 
-use App\Challenge as BaseChallenge;
+use App\ChallengeAbstract;
 use Illuminate\Support\Collection;
 use stdClass as StdClass;
 
-class Challenge extends BaseChallenge
+class Challenge extends ChallengeAbstract
 {
     private array $engine;
     private array $debug;

@@ -1,9 +1,9 @@
 <?php
 namespace App\Y2023\D1\P2;
 
-use App\Challenge as BaseChallenge;
+use App\ChallengeAbstract;
 
-class Challenge extends BaseChallenge
+class Challenge extends ChallengeAbstract
 {
     const DIGITS = [
         1 => 1,

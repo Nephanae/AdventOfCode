@@ -4,7 +4,7 @@ namespace App;
 use App\Output;
 use Illuminate\Support\LazyCollection;
 
-abstract class Challenge
+abstract class ChallengeAbstract
 {
     protected LazyCollection $input;
     protected Output $output;

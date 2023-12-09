@@ -1,10 +1,10 @@
 <?php
 namespace App\Y2023\D7\P2;
 
-use App\Challenge as BaseChallenge;
+use App\ChallengeAbstract;
 use Illuminate\Support\Collection;
 
-class Challenge extends BaseChallenge
+class Challenge extends ChallengeAbstract
 {
     const CARDS = ['J' => 1, '2' => 2, '3' => 3, '4' => 4, '5' => 5, '6' => 6, '7' => 7, '8' => 8, '9' => 9, 'T' => 10, 'Q' => 11, 'K' => 12, 'A' => 13];
     const HIGH_CARD = 1;

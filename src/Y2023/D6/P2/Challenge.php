@@ -1,11 +1,11 @@
 <?php
 namespace App\Y2023\D6\P2;
 
-use App\Challenge as BaseChallenge;
+use App\ChallengeAbstract;
 use Illuminate\Support\Collection;
 use stdClass as StdClass;
 
-class Challenge extends BaseChallenge
+class Challenge extends ChallengeAbstract
 {
     public function resolve(): string
     {

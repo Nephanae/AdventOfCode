@@ -1,8 +1,8 @@
 namespace App\Y<?= $year ?>\D<?= $day ?>\P<?= $part ?>;
 
-use App\Challenge as BaseChallenge;
+use App\ChallengeAbstract;
 
-class Challenge extends BaseChallenge
+class Challenge extends ChallengeAbstract
 {
     public function resolve(): string
     {
