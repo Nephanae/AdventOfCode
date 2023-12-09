@@ -1,6 +1,7 @@
 <?php
 namespace App;
 
+use App\Logger;
 use App\Output;
 use Dotenv\Dotenv;
 use Exception;
@@ -15,6 +16,7 @@ final class App
         ['short' => 'l', 'long' => 'list', 'type' => 'no_value', 'comm' => 'List challenges'],
         ['short' => 'c', 'long' => 'create', 'type' => 'no_value', 'comm' => 'Create challenge class'],
         ['short' => 's', 'long' => 'statement', 'type' => 'no_value', 'comm' => 'Retrieve and print challenge statement'],
+        ['short' => 'd', 'long' => 'debug', 'type' => 'no_value', 'comm' => 'Print debug output'],
     ];
 
     private Collection $opts;
@@ -24,6 +26,7 @@ final class App
     {
         $this->opts = $this->buildOpts();
         $this->dotenv = $dotenv;
+        $this->logger = new Logger();
     }
 
     public function getOpts(): Collection
@@ -59,7 +62,7 @@ final class App
 
         $challengeClass = "\\App\\Y{$year}\\D{$day}\\P{$part}\\Challenge";
         if (!class_exists($challengeClass)) {
-            echo "Unknown challenge {$challengeClass}" . PHP_EOL;
+            $this->logger()->critical("Unknown challenge {$challengeClass}");
 
             return $this->usage();
         }
@@ -69,11 +72,14 @@ final class App
             : 'php://stdin';
 
         $challenge = new $challengeClass($this->getInput($input));
+        if ($this->opts->has('debug')) {
+            $challenge->setLogger($this->logger);
+        }
 
-        echo "Challenge {$year}/{$day}/{$part} :" . PHP_EOL;
+        $this->logger->notice("Challenge {$year}/{$day}/{$part} :");
         $time = microtime(true);
-        echo $challenge->resolve() . PHP_EOL;
-        echo 'Solved in ' . (microtime(true) - $time) . 's' . PHP_EOL;
+        $this->logger->notice($challenge->resolve());
+        $this->logger->notice('Solved in ' . (microtime(true) - $time) . 's');
     }
 
     private function create(string $challengeArg = null): void
@@ -82,7 +88,7 @@ final class App
             ? explode('/', $challengeArg)
             : array_values((array) $this->getNextChallenge());
 
-        echo "create {$year}/{$day}/{$part}" . PHP_EOL;
+        $this->logger->notice("create {$year}/{$day}/{$part}");
 
         if (!is_dir(__DIR__ . "/Y{$year}")) {
             mkdir(__DIR__ . "/Y{$year}");
@@ -101,14 +107,14 @@ final class App
         $fileContents = ob_get_clean();
 
         file_put_contents($filename, '<?php' . PHP_EOL . $fileContents);
-        echo "New file created : {$filename}" . PHP_EOL;
+        $this->logger->notice("New file created : {$filename}");
     }
 
     private function list(): void
     {
-        echo 'list :' . PHP_EOL;
+        $this->logger->notice('list :');
         foreach ($this->getChallengeList() as $info) {
-            echo "{$info->year}/{$info->day}/{$info->part}" . PHP_EOL;
+            $this->logger->notice("{$info->year}/{$info->day}/{$info->part}");
         }
     }
 
@@ -142,16 +148,17 @@ final class App
 
         $contents = preg_replace(array_keys($replacements), array_values($replacements), $contents);
 
-        echo PHP_EOL . strip_tags($contents) . PHP_EOL;
+        $this->logger->notice('');
+        $this->logger->notice(strip_tags($contents));
     }
 
     private function usage(): void
     {
-        echo 'Usage :' . PHP_EOL;
-        echo 'php scripts.php [OPTIONS] [challenge] < input' . PHP_EOL;
-        echo " [challenge]\tChallenge with format : <year>/<day>/<part>" . PHP_EOL;
+        $this->logger->notice('Usage :');
+        $this->logger->notice('php scripts.php [OPTIONS] [challenge] < input');
+        $this->logger->notice(" [challenge]\tChallenge with format : <year>/<day>/<part>");
         foreach (self::OPTS as $opt) {
-            echo " -{$opt['short']} --{$opt['long']}\t{$opt['comm']}" . ($opt['type'] === 'required' ? "\t*required" : '') . PHP_EOL;
+            $this->logger->notice(" -{$opt['short']} --{$opt['long']}\t{$opt['comm']}" . ($opt['type'] === 'required' ? "\t*required" : ''));
         }
     }
 
@@ -191,7 +198,7 @@ final class App
         if (!file_exists($filename)) {
             $this->dotenv->required('AOC_SESSION')->notEmpty();
             $session = $_ENV['AOC_SESSION'];
-            echo "Downloading input..." . PHP_EOL;
+            $this->logger->notice("Downloading input...");
             $contents = file_get_contents("https://adventofcode.com/{$year}/day/{$day}/input", false, stream_context_create([
                 'http' => ['header' => "Cookie: session={$session}\r\n"],
             ]));
