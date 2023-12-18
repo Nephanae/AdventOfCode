@@ -2,6 +2,7 @@
 namespace App\Y2023\D12\P1;
 
 use App\ChallengeAbstract;
+use Generator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
 
@@ -14,64 +15,62 @@ class Challenge extends ChallengeAbstract
                 list($states, $groups) = explode(' ', $row);
 
                 return (object) [
-                    'states' => new Collection(str_split($states)),
+                    'states' => $states,
                     'groups' => new Collection(explode(',', $groups)),
                 ];
             })
             ->map(function ($row) {
-                $this->logger->debug("{$row->states->implode('')} {$row->groups->implode(',')}");
+                $this->logger->debug("{$row->states} {$row->groups->implode(',')}");
+                $count = $this->getPermutations($row->states, $row->groups)->count();
 
-                return $this
-                    ->getPermutations($row->states)
-                    ->filter(fn ($states) => $this->isValid($states, $row->groups))
-                    ->count();
+                $this->logger->debug($count);
+
+                return $count;
             })
             ->sum();
     }
 
-    private function getPermutations(Collection $states): LazyCollection
+    private function getPermutations(string $states, Collection $groups): LazyCollection
     {
-        return new LazyCollection(function () use ($states) {
-            $states = clone $states;
+        return new LazyCollection(function () use ($states, $groups) {
+            $statesCount = strlen($states);
+            $max = $statesCount - ($groups->sum() + $groups->count() - 1);
 
-            $unknowns = $states
-                ->filter(fn ($state) => $state === '?')
-                ->map(fn ($state, $key) => $key)
-                ->values()
-                ->toArray();
-
-            $length = count($unknowns);
-            $max = bindec(str_repeat(1, $length));
-            
-            for ($i = 0; $i < $max + 1; $i++) {
-                $bin = str_split(sprintf("%0{$length}d", decbin($i)));
-                foreach ($bin as $index => $value) {
-                    $states->put($unknowns[$index], $value ? '#' : '.');
-                }
-
-                $this->logger->info($states->implode(''));
-
-                yield $states->implode('');
+            foreach ($this->getGroupPermutations($groups, 0, $states, $statesCount) as $permutation) {
+                $this->logger->info($permutation);
+                
+                yield $permutation;
             }
         });
     }
 
-    private function isValid(string $states, Collection $groups): bool
+    private function getGroupPermutations(Collection $groups, int $index, string $states, int $statesCount, string $previous = ''): Generator
     {
-        $matches = [];
-        preg_match_all('/(#+)/', $states, $matches);
+        $groupLength = $groups->get($index);
+        $nextGroups = $groups->skip($index);
+        $max = $statesCount - strlen($previous) - $nextGroups->sum() - $nextGroups->count() + 2;
+        $isLast = $index === $groups->count() - 1;
 
-        if (count($matches[0]) !== $groups->count()) {
-            return false;
+        for ($pos = 0; $pos < $max; $pos++) {
+            $permutation = $previous . str_repeat('.', $pos) . str_repeat('#', $groupLength);
+            $permutation .= !$isLast ? '.' : str_repeat('.', $statesCount - strlen($permutation));
+
+            if (!$this->isValid($permutation, $states)) {
+                continue;
+            }
+
+            $isLast ? yield $permutation : yield from $this->getGroupPermutations($groups, $index + 1, $states, $statesCount, $permutation);
         }
+    }
 
-        foreach ($groups as $index => $length) {
-            if (strlen($matches[0][$index]) != $length) {
+    private function isValid(string $permutation, string $states): bool
+    {
+        $iCount = strlen($permutation);
+        for ($i = 0; $i < $iCount; $i++) {
+            if ($states[$i] !== '?' && $permutation[$i] !== $states[$i]) {
                 return false;
             }
         }
-
-        $this->logger->debug($states);
 
         return true;
     }
