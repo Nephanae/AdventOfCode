@@ -10,9 +10,8 @@ use stdClass;
 
 class Map
 {
-    private Collection $tiles;
-    private array $map;
-    private stdClass $size;
+    protected array $map;
+    protected stdClass $size;
 
     public function __construct(Enumerable $input, string $tileClass = Tile::class)
     {
