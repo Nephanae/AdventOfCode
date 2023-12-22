@@ -5,16 +5,23 @@ use App\Tile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Enumerable;
 use Illuminate\Support\LazyCollection;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\NullLogger;
 use RangeException;
 use stdClass;
 
-class Map
+class Map implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     protected array $map;
     protected stdClass $size;
 
     public function __construct(Enumerable $input, string $tileClass = Tile::class)
     {
+        $this->logger = new NullLogger();
+
         $this->map = $input->map(fn($row) => str_split($row))->toArray();
 
         foreach ($this->map as $y => $row) {
