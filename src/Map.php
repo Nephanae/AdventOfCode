@@ -43,11 +43,16 @@ class Map implements LoggerAwareInterface
 
     public function get(int $x, int $y): Tile
     {
-        if ($x < 0 || $x > $this->size->x - 1 || $y < 0 || $y > $this->size->y - 1) {
+        if (!$this->has($x, $y)) {
             throw new RangeException("Pipe::get({$x}, {$y} : Out of map");
         }
 
         return $this->map[$y][$x];
+    }
+
+    public function has(int $x, int $y): bool
+    {
+        return $x >= 0 && $x < $this->size->x && $y >= 0 && $y < $this->size->y;
     }
 
     public function getCol(int $x): LazyCollection
